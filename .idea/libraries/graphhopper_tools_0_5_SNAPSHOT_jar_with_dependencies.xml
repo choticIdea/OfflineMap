@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="graphhopper-tools-0.5-SNAPSHOT-jar-with-dependencies">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/app/libs/graphhopper-tools-0.5-SNAPSHOT-jar-with-dependencies.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

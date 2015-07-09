@@ -1,0 +1,155 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/mapViewLayout"></LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|right"
+        android:gravity="right"
+        android:layout_alignParentRight="true"
+        android:orientation="vertical"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:id="@+id/controlLayout"
+        android:layout_margin="10dp">
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/buttonGps"
+            android:src="@drawable/ic_gps_fixed_white_36dp"
+            android:background="@drawable/round_button"
+            android:contentDescription="@string/content_description_button_gps"
+            android:clickable="true"
+            android:onClick="onClick"
+            android:layout_marginBottom="@dimen/button_bottom_spacing" />
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/controlZoomIn"
+            android:background="@drawable/round_button"
+            android:src="@drawable/ic_zoom_in_white_36dp"
+            android:layout_marginBottom="@dimen/button_bottom_spacing"
+            android:contentDescription="@string/content_description_button_zoom_in"
+            android:onClick="onClick" />
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/controlZoomOut"
+            android:background="@drawable/round_button"
+            android:src="@drawable/ic_zoom_out_white_36dp"
+            android:contentDescription="@string/content_description_button_zoom_out"
+            android:onClick="onClick" />
+
+    </LinearLayout>
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/buttonNav"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:visibility="gone"
+        android:src="@drawable/ic_navigation_black_36dp"
+        android:background="@drawable/round_button_white"
+        android:contentDescription="@string/content_description_button_menu"
+        android:onClick="onClick"
+        android:layout_margin="10dp"
+        android:longClickable="false" />
+
+    <RelativeLayout
+        android:orientation="vertical" android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/infobar_background"
+        android:paddingBottom="10dp"
+        android:paddingTop="5dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="5dp"
+        android:id="@+id/infobar">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="dari"
+            android:id="@+id/start"
+            android:textColor="@android:color/white"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentLeft="true"
+            android:layout_marginTop="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ke"
+            android:id="@+id/finish"
+            android:textColor="@android:color/white"
+            android:layout_toLeftOf="@+id/to"
+            android:layout_marginTop="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_alignTop="@+id/to" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="0.601237, 110.123719"
+            android:id="@+id/from"
+            android:textColor="#ffffffff"
+            android:layout_gravity="center_horizontal"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginBottom="5dp"
+            android:background="@drawable/rounded_rect_label"
+            android:layout_toRightOf="@+id/start"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="5dp"
+            android:layout_toLeftOf="@+id/buttonClosePoint"
+            android:textSize="16sp" />
+
+        <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="0.601237, 110.123719"
+            android:id="@+id/to"
+            android:textColor="#ffffffff"
+            android:layout_gravity="center_horizontal"
+            android:layout_below="@+id/from"
+            android:layout_centerHorizontal="true"
+            android:background="@drawable/rounded_rect_label"
+            android:layout_marginRight="5dp"
+            android:layout_alignLeft="@+id/from"
+            android:layout_toLeftOf="@+id/buttonClosePoint"
+            android:textSize="16sp" />
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/buttonClosePoint"
+            android:layout_column="1"
+            android:layout_row="0"
+            android:adjustViewBounds="false"
+            android:layout_weight="1"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="false"
+            android:layout_alignWithParentIfMissing="false"
+            android:layout_alignParentBottom="false"
+            android:layout_centerVertical="true"
+            android:background="@drawable/ic_close_white_36dp"
+            android:padding="20dp"
+            android:onClick="onClick" />
+    </RelativeLayout>
+
+</RelativeLayout>
+

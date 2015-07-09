@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="actionbar_color">#09B</color>
+    <color name="actionbar_textColor">#FFF</color>
+    <color name="searchbar_background">#09B</color>
+    <color name="list_item_shadow">#8000</color>
+</resources>
