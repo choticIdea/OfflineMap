@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -35,6 +36,7 @@ import org.mapsforge.core.model.Point;
 import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
 import org.mapsforge.map.android.util.AndroidUtil;
 import org.mapsforge.map.android.view.MapView;
+import org.mapsforge.map.layer.LayerManager;
 import org.mapsforge.map.layer.Layers;
 import org.mapsforge.map.layer.cache.TileCache;
 import org.mapsforge.map.layer.overlay.Marker;
@@ -50,10 +52,13 @@ import java.io.FileNotFoundException;
 import java.text.DecimalFormat;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,LocationListener{
 
+    private LayerManager layManager;
+    private LocationManager locManager;
     private File mapsFolder;
     private LatLong start;
+    private Marker startMarker;
     private LatLong end;
     private LinearLayout infoLayout;
     private LinearLayout mapViewLayout;
@@ -85,7 +90,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mapView.setClickable(true);
         mapView.setBuiltInZoomControls(false);
 
-
+        layManager = mapView.getLayerManager();
+        locManager = (LocationManager)this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         tileCache = AndroidUtil.createTileCache(this, getClass().getSimpleName(), mapView.getModel().displayModel.getTileSize(),
                 1f, mapView.getModel().frameBufferModel.getOverdrawFactor());
 
@@ -152,23 +158,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     void pinpointUser() {
-        Float bestAccuracy = Float.MAX_VALUE;
-        Location best = null;
-        LocationManager lm = (LocationManager) this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
-        List<String> providers = lm.getAllProviders();
-        for(String p:providers){
-            Location l = lm.getLastKnownLocation(p);
-            if(l != null){
-                Float accuracy = l.getAccuracy();
-                if(accuracy < bestAccuracy){
-                    best = l;
-                    bestAccuracy = accuracy;
-                }
-            }
-        }
-        if(best != null) {
+         locManager.requestSingleUpdate(LocationManager.GPS_PROVIDER,this,null);
+         Location best = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+         if(best != null) {
             mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(new LatLong(best.getLatitude(), best.getLongitude()), (byte) 15));
         }
+        start = new LatLong(best.getLatitude(),best.getLongitude());
+        startMarker = createMarker(start,R.drawable.ic_place_blue_36dp);
+        layManager.getLayers().add(startMarker);
     }
 
     void loadGraphStorage()
@@ -192,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //debug message: "An error happend while creating graph:" + getErrorMessage();
                 } else
                 {
-                    //debug message: "Finished loading graph. Press long to define where to start and end the route.";
+                    logUser("Finished loading graph");
                 }
 
                 finishPrepare();
@@ -227,16 +224,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Paint paintStroke = AndroidGraphicFactory.INSTANCE.createPaint();
         paintStroke.setStyle(Style.STROKE);
         paintStroke.setColor(Color.argb(200, 0, 0xCC, 0x99));
-//        paintStroke.setDashPathEffect(new float[]
-//                {
-//                        25, 15
-//                });
         paintStroke.setStrokeWidth(6);
 
         // TODO: new mapsforge version wants an mapsforge-paint, not an android paint.
         // This doesn't seem to support transparceny
         //paintStroke.setAlpha(128);
-        Polyline line = new Polyline((org.mapsforge.core.graphics.Paint) paintStroke, AndroidGraphicFactory.INSTANCE);
+        Polyline line = new Polyline(paintStroke, AndroidGraphicFactory.INSTANCE);
         List<LatLong> geoPoints = line.getLatLongs();
         PointList tmp = response.getPoints();
         for (int i = 0; i < response.getPoints().getSize(); i++)
@@ -329,43 +322,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             logUser("Calculation still in progress");
             return false;
         }
-        Layers layers = mapView.getLayerManager().getLayers();
-
-        if (start != null && end == null)
+        Layers layers = layManager.getLayers();
+        end = tapLatLong;
+        shortestPathRunning = true;
+        Marker marker = createMarker(tapLatLong, R.drawable.place_red);
+        if (marker != null)
         {
-            end = tapLatLong;
-            shortestPathRunning = true;
-            Marker marker = createMarker(tapLatLong, R.drawable.place_red);
-            if (marker != null)
-            {
                 layers.add(marker);
-            }
+        }
 
-            calcPath(start.latitude, start.longitude, end.latitude,
+        calcPath(start.latitude, start.longitude, end.latitude,
                     end.longitude);
-        }
-        else
-        {
-            setInfoBarVisible(false);
-            start = tapLatLong;
-            end = null;
-            // remove all layers but the first one, which is the map
-            removeLayersExceptMap();
-
-            Marker marker = createMarker(start, R.drawable.place_blue);
-            if (marker != null)
-            {
-                layers.add(marker);
-            }
-        }
         return true;
     }
 
     public void removeLayersExceptMap(){
-        Layers layers = mapView.getLayerManager().getLayers();
-        while (layers.size() > 1)
+        Layers layers = layManager.getLayers();
+        while (layers.size() > 2)
         {
-            layers.remove(1);
+            layers.remove(layers.size()-1);
         }
     }
 
@@ -401,5 +376,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 end = null;
                 break;
         }
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
     }
 }
