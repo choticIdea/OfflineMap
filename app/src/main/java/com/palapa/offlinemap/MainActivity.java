@@ -150,10 +150,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER);
         }
 
-        pinpointUser();
+
         mapView.getLayerManager().getLayers().add(tileRendererLayer);
 
         mapViewLayout.addView(mapView);
+        pinpointUser();
         loadGraphStorage();
     }
 
@@ -322,18 +323,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             logUser("Calculation still in progress");
             return false;
         }
-        Layers layers = layManager.getLayers();
-        end = tapLatLong;
-        shortestPathRunning = true;
-        Marker marker = createMarker(tapLatLong, R.drawable.place_red);
-        if (marker != null)
-        {
+        if(start != null) {
+            Layers layers = layManager.getLayers();
+            end = tapLatLong;
+            shortestPathRunning = true;
+            Marker marker = createMarker(tapLatLong, R.drawable.place_red);
+            if (marker != null) {
                 layers.add(marker);
-        }
+            }
 
-        calcPath(start.latitude, start.longitude, end.latitude,
+            calcPath(start.latitude, start.longitude, end.latitude,
                     end.longitude);
-        return true;
+            return true;
+        }
+        else
+            return false;
+
+
     }
 
     public void removeLayersExceptMap(){
@@ -372,7 +378,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.buttonClosePoint:
                 removeLayersExceptMap();
                 setInfoBarVisible(false);
-                start = null;
                 end = null;
                 break;
         }
