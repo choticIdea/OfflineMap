@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/OfflineMap.iml" filepath="$PROJECT_DIR$/OfflineMap.iml" />
+      <module fileurl="file://$PROJECT_DIR$/OfflineRouting.iml" filepath="$PROJECT_DIR$/OfflineRouting.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
