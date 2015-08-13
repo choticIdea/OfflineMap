@@ -1,6 +1,7 @@
 package com.palapa.offlinemap;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.drawable.Drawable;
@@ -76,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d("MainActivity","First created");
         setContentView(R.layout.activity_main);
         mapViewLayout = (LinearLayout)findViewById(R.id.mapViewLayout);
         infoBar = (RelativeLayout) findViewById(R.id.infobar);
@@ -159,14 +161,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     void pinpointUser() {
-         locManager.requestSingleUpdate(LocationManager.GPS_PROVIDER,this,null);
+         locManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, this, null);
          Location best = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
          if(best != null) {
             mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(new LatLong(best.getLatitude(), best.getLongitude()), (byte) 15));
+             start = new LatLong(best.getLatitude(),best.getLongitude());
+             startMarker = createMarker(start,R.drawable.ic_place_blue_36dp);
+             layManager.getLayers().add(startMarker);
         }
-        start = new LatLong(best.getLatitude(),best.getLongitude());
-        startMarker = createMarker(start,R.drawable.ic_place_blue_36dp);
-        layManager.getLayers().add(startMarker);
+
     }
 
     void loadGraphStorage()
@@ -363,8 +366,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void onClick(View v){
         switch(v.getId()){
-//            case R.id.buttonNav:
-//                break;
+           case R.id.buttonNav:
+               Intent i = new Intent(this,ClientPick.class);
+               startActivity(i);
+               break;
             case R.id.buttonGps:
                 pinpointUser();
                 ///ahahahha
@@ -382,6 +387,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
+    @Override
+    public void onResume(){
+        super.onResume();
+        Log.d("MainActivity","resumed!");
+        Bundle extras = getIntent().getExtras();
+        if(extras != null)
+        {
+           LatLong pos = new LatLong(extras.getDouble("Latitude"),extras.getDouble("Longitude"));
+            Marker p = createMarker(pos,R.drawable.place_red);
+            mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(pos,(byte) 13));
+            layManager.getLayers().add(p);
+        }
+
+
+
+    }
+    @Override
+    protected  void onNewIntent(Intent intent){
+        setIntent(intent);
+    }
+    @Override
+    public  void onPause(){
+        super.onPause();
+        Log.d("Main","Mainn is paused");
+    }
+    @Override
+    public  void onStop()
+    {
+        super.onStop();
+        Log.d("main","Main is stopped");
+    }
+
+
 
     @Override
     public void onLocationChanged(Location location) {
