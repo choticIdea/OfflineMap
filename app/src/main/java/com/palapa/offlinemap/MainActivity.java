@@ -1,6 +1,8 @@
 package com.palapa.offlinemap;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Path;
@@ -12,10 +14,14 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +34,8 @@ import com.graphhopper.util.Constants;
 import com.graphhopper.util.PointList;
 import com.graphhopper.util.StopWatch;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.mapsforge.core.graphics.Bitmap;
 import org.mapsforge.core.graphics.Paint;
 import org.mapsforge.core.graphics.Style;
@@ -51,10 +59,15 @@ import org.mapsforge.map.rendertheme.InternalRenderTheme;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,LocationListener{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,LocationListener,ListView.OnItemClickListener{
 
+    public  static ArrayList<JSONObject> clientID;
+    private ImageButton clientRouting;
+    private ListView clientListView;
+    private ClientRoutingAdapter adapter;
     private LayerManager layManager;
     private LocationManager locManager;
     private File mapsFolder;
@@ -66,7 +79,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private GraphHopper hopper;
     private MapView mapView;
     private RelativeLayout infoBar;
-    private String currentArea = "indonesia";
+    private String INDONESIA = "indonesia";
     private TextView textFrom;
     private TextView textTo;
     private TileCache tileCache;
@@ -77,60 +90,86 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d("MainActivity","First created");
+        Log.d("MainActivity", "First created");
         setContentView(R.layout.activity_main);
         mapViewLayout = (LinearLayout)findViewById(R.id.mapViewLayout);
-        infoBar = (RelativeLayout) findViewById(R.id.infobar);
-        textFrom= (TextView) findViewById(R.id.from);
-        textTo  = (TextView) findViewById(R.id.to);
-
-        infoBar.setVisibility(View.GONE);
-
+        clientRouting = (ImageButton) findViewById(R.id.clientsRouting);
+        clientID = new ArrayList<>();
+        clientListView = (ListView) findViewById(R.id.clientLocation);
+//        infoBar.setVisibility(View.GONE);
+        adapter = new ClientRoutingAdapter(this,getLayoutInflater(),clientID);
         AndroidGraphicFactory.createInstance(getApplication());
-
+        clientListView.setAdapter(adapter);
+        clientListView.setOnItemClickListener(this);
         mapView = new MapView(this);
         mapView.setClickable(true);
         mapView.setBuiltInZoomControls(false);
 
         layManager = mapView.getLayerManager();
         locManager = (LocationManager)this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+
+            alertGPSoff();
         tileCache = AndroidUtil.createTileCache(this, getClass().getSimpleName(), mapView.getModel().displayModel.getTileSize(),
                 1f, mapView.getModel().frameBufferModel.getOverdrawFactor());
 
         boolean greaterOrEqKitkat = Build.VERSION.SDK_INT >= 19;
+        //maybe i should place another folder to setup
         if (greaterOrEqKitkat)
         {
             if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED))
             {
                 // TODO ??? show error:"GraphHopper is not usable without an external storage!"
+                //some device spare the space in the internal storage for external usage
                 return;
             }
             mapsFolder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                    "/graphhopper/maps/");
+                    "/eletrouting/maps/");
         } else
-            mapsFolder = new File(Environment.getExternalStorageDirectory(), "/graphhopper/maps/");
+            mapsFolder = new File(Environment.getExternalStorageDirectory(), "/eletrouting/maps/");
 
         if (!mapsFolder.exists())
             mapsFolder.mkdirs();
 
 
-        final File areaFolder = new File(mapsFolder, currentArea + "-gh");
-        if (areaFolder.exists())
+        final File mapFile = new File(mapsFolder, INDONESIA + "-gh");
+        if (mapFile.exists())
         {
             log("eksis");
-            loadMap(areaFolder);
+            loadMap(mapFile);
         }
         else
         {
             log("ga eksis");
-            // TODO show error:"Folder not found: " areaFolder
+            // TODO show error:"Folder not found: " mapFile
         }
     }
+    void alertGPSoff(){
+        AlertDialog a = new AlertDialog.Builder(this)
+                .setTitle("GPS tidak menyala")
+                .setMessage("Aplikasi ini membutuhkan GPS untuk berjalan optimal")
+                .setPositiveButton("Oke", new DialogInterface.OnClickListener() {
 
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent i = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivity(i);
+
+                    }
+                }).create();
+
+        if(!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
+            a.show();
+        a.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                Log.d("Dialog","Exited or..?");
+            }
+        });
+    }
     void loadMap( File areaFolder )
     {
         //TODO show message: "Loading map"
-        MapDataStore mapDataStore = new MapFile(new File(areaFolder, currentArea + ".map"));
+        MapDataStore mapDataStore = new MapFile(new File(areaFolder, INDONESIA + ".map"));
 
         mapView.getLayerManager().getLayers().clear();
 
@@ -139,7 +178,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         {
             @Override
             public boolean onLongPress(LatLong tapLatLong, Point layerXY, Point tapXY) {
-                return onMapTap(tapLatLong, layerXY, tapXY);
+                // deprecated, implemented later with better function,;;return onMapTap(tapLatLong, layerXY, tapXY);
+                return false;
+            }
+            @Override
+            public boolean onTap(LatLong tapLatLong, Point layerXY, Point tapXY){
+                if(clientListView.getVisibility() == View.VISIBLE)
+                {
+                    clientListView.setVisibility(View.GONE);
+                    clientRouting.setVisibility(View.VISIBLE);
+                }
+                return false;
             }
 
         };
@@ -180,7 +229,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             protected Path saveDoInBackground( Void... v ) throws Exception
             {
                 GraphHopper tmpHopp = new GraphHopper().forMobile();
-                tmpHopp.load(new File(mapsFolder, currentArea).getAbsolutePath());
+                tmpHopp.load(new File(mapsFolder, INDONESIA).getAbsolutePath());
                 //debug message: "found graph " + tmpHopp.getGraph().toString() + ", nodes:" + tmpHopp.getGraph().getNodes();
                 hopper = tmpHopp;
                 return null;
@@ -243,7 +292,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         return line;
     }
-
+   //TODO updating below function, createMarker
     private Marker createMarker( LatLong p, int resource )
     {
         Drawable drawable = getResources().getDrawable(resource);
@@ -284,7 +333,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                            + "km long, time:" + resp.getMillis() / 60000f + "min, debug:" + time
 
                     mapView.getLayerManager().getLayers().add(createPolyline(resp));
-                    setInfoBarVisible(true);
+//                    setInfoBarVisible(true);
                     //mapView.redraw();
                 } else
                 {
@@ -356,7 +405,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void setInfoBarVisible(boolean visible){
         if(visible && start != null && end != null) {
             DecimalFormat df = new DecimalFormat("#.######");
-            textFrom.setText(df.format(start.latitude) +", "+ df.format(start.longitude));
+           // textFrom.setText(df.format(start.latitude) +", "+ df.format(start.longitude));
             textFrom.setText(df.format(end.latitude) +", "+ df.format(end.longitude));
             infoBar.setVisibility(View.VISIBLE);
         } else {
@@ -380,21 +429,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.controlZoomOut:
                 mapView.getModel().mapViewPosition.zoomOut();
                 break;
-            case R.id.buttonClosePoint:
-                removeLayersExceptMap();
-                setInfoBarVisible(false);
-                end = null;
+            case R.id.clientsRouting:
+                clientListView.setVisibility(View.VISIBLE);
+                clientRouting.setVisibility(View.GONE);
+                Log.d("Hmm","button didnt work?");
+
                 break;
+
         }
     }
     @Override
     public void onResume(){
         super.onResume();
+
         Log.d("MainActivity","resumed!");
         Bundle extras = getIntent().getExtras();
+        if(clientID.size() != 0)
+            clientRouting.setVisibility(View.VISIBLE);
+        else
+            clientRouting.setVisibility(View.GONE);
         if(extras != null)
         {
-           LatLong pos = new LatLong(extras.getDouble("Latitude"),extras.getDouble("Longitude"));
+            try {
+                clientID.add(new JSONObject(extras.getString("test")));
+                adapter.updateData(clientID);
+                Log.d("ListView","Datachanged");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            clientRouting.setVisibility(View.VISIBLE);
+            LatLong pos = new LatLong(extras.getDouble("Latitude"),extras.getDouble("Longitude"));
             Marker p = createMarker(pos,R.drawable.place_red);
             mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(pos,(byte) 13));
             layManager.getLayers().add(p);
@@ -439,5 +503,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onProviderDisabled(String provider) {
 
+    }
+
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+       JSONObject client = (JSONObject)adapter.getItem(position);
+        //LatLong l = new LatLong(,client.optDouble("Longitude"));
+        calcPath(start.latitude,start.longitude,client.optDouble("Latitude"),client.optDouble("Longitude"));
     }
 }

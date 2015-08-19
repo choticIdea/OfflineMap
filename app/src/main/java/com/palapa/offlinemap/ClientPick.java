@@ -46,7 +46,7 @@ public class ClientPick extends Activity implements View.OnKeyListener,ListView.
         listView.setOnItemClickListener(this);
         //loading data
         try {
-            File data = new File(Environment.getExternalStorageDirectory(), "ClientData.json");
+            File data = new File(Environment.getExternalStorageDirectory(), "eletrouting/clients/ClientData.json");
             FileInputStream dataStream = new FileInputStream(data);
             String jsonString = null;
             FileChannel fc = dataStream.getChannel();
@@ -117,11 +117,19 @@ public class ClientPick extends Activity implements View.OnKeyListener,ListView.
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        Intent i = new Intent(this, MainActivity.class);
         JSONObject client = (JSONObject)adapter.getItem(position);
+
+        for(JSONObject z: MainActivity.clientID)
+        {
+            if(z.equals(client))
+                return;
+        }
+        Intent i = new Intent(this, MainActivity.class);
+        i.putExtra("test",client.toString());
         i.putExtra("Latitude",client.optDouble("Latitude"));
         i.putExtra("Longitude",client.optDouble("Longitude"));
+        i.putExtra("ClientID",client.optLong("ID"));
         startActivity(i);
-      //  finish();
+       finish();
     }
 }
