@@ -57,9 +57,9 @@ public class JSONAdapter extends BaseAdapter {
         else {
             holder = (Holder) convertView.getTag();
         }
-        holder.name.setText(obj.optString("Nama"));
-        holder.latitude.setText(Double.toString(obj.optDouble("Latitude")));
-        holder.longitude.setText(Double.toString(obj.optDouble("Longitude")));
+        holder.name.setText(obj.optString("name"));
+        holder.latitude.setText(Double.toString(obj.optDouble("latitude")));
+        holder.longitude.setText(Double.toString(obj.optDouble("longitude")));
         return convertView;
     }
     public void updateData(JSONArray data){
