@@ -70,7 +70,7 @@ public class ClientPick extends Activity implements ListView.OnItemClickListener
         }catch(Exception e){
             Log.d("JSON error",e.toString());
         }
-
+//lol
         Toast.makeText(this, "Client data ready", Toast.LENGTH_SHORT).show();
 
 
