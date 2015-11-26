@@ -48,7 +48,7 @@ public class ClientPick extends Activity implements ListView.OnItemClickListener
         searchResult = new JSONArray();
         //loading data
         try {
-            File data = new File(Environment.getExternalStorageDirectory(), "eletrouting/clients/example.json");
+            File data = new File(Environment.getExternalStorageDirectory(), "eletrouting/clients/ClientData.json");
             FileInputStream dataStream = new FileInputStream(data);
             String jsonString = null;
             FileChannel fc = dataStream.getChannel();
@@ -115,10 +115,13 @@ public class ClientPick extends Activity implements ListView.OnItemClickListener
                 return;
         }*/
         Intent i = new Intent(this, MainActivity.class);
+        Double latitude = Double.parseDouble(client.optString("latitude"));
+        Double longitude = Double.parseDouble(client.optString("longitude"));
         i.putExtra("test",client.toString());
-        i.putExtra("Latitude",client.optDouble("Latitude"));
-        i.putExtra("Longitude",client.optDouble("Longitude"));
-        i.putExtra("ClientName",client.optString("Nama"));
+        i.putExtra("Latitude", latitude);
+        i.putExtra("Longitude", longitude);
+        Log.d("Double or?", "" +latitude +" "+longitude);
+        i.putExtra("ClientName", client.optString("name"));
         startActivity(i);
        finish();
     }

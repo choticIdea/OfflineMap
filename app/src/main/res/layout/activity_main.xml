@@ -21,7 +21,8 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
         android:id="@+id/controlLayout"
-        android:layout_margin="10dp">
+        android:layout_margin="10dp"
+        android:visibility="gone">
 
         <ImageButton
             android:layout_width="wrap_content"
@@ -62,121 +63,67 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:visibility="visible"
+        android:visibility="gone"
         android:src="@drawable/ic_navigation_black_36dp"
         android:background="@drawable/round_button_white"
         android:contentDescription="@string/content_description_button_menu"
         android:onClick="onClick"
         android:layout_margin="10dp"
         android:longClickable="false" />
-    <RelativeLayout
-        android:orientation="vertical" android:layout_width="match_parent"
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/infobar_background"
-        android:paddingBottom="10dp"
-        android:paddingTop="5dp"
-        android:paddingLeft="10dp"
-        android:paddingRight="5dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="0.45"
         android:id="@+id/infobar"
         android:visibility="gone">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="dari"
-            android:id="@+id/start"
-            android:textColor="@android:color/white"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentLeft="true"
-            android:layout_marginTop="10dp" />
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:id="@+id/hospitalName"
+            android:background="@color/background_floating_material_dark"
+            android:textColor="#ffffff"
+            android:textSize="30dp"
+             />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ke"
-            android:id="@+id/finish"
-            android:textColor="@android:color/white"
-            android:layout_toLeftOf="@+id/to"
-            android:layout_marginTop="10dp"
-            android:layout_marginRight="10dp"
-            android:layout_alignTop="@+id/to" />
+            android:id="@+id/distance"
+            android:background="@color/background_floating_material_dark"
+            android:textColor="#ffffff"
+            android:textSize="30dp" />
+    </LinearLayout>
 
-        <TextView
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="0.601237, 110.123719"
-            android:id="@+id/from"
-            android:textColor="#ffffffff"
-            android:layout_gravity="center_horizontal"
-            android:layout_centerHorizontal="true"
-            android:layout_alignParentTop="true"
-            android:layout_marginBottom="5dp"
-            android:background="@drawable/rounded_rect_label"
-            android:layout_toRightOf="@+id/start"
-            android:layout_marginLeft="10dp"
-            android:layout_marginRight="5dp"
-            android:layout_toLeftOf="@+id/buttonClosePoint"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="0.601237, 110.123719"
-            android:id="@+id/to"
-            android:textColor="#ffffffff"
-            android:layout_gravity="center_horizontal"
-            android:layout_below="@+id/from"
-            android:layout_centerHorizontal="true"
-            android:background="@drawable/rounded_rect_label"
-            android:layout_marginRight="5dp"
-            android:layout_alignLeft="@+id/from"
-            android:layout_toLeftOf="@+id/buttonClosePoint"
-            android:textSize="16sp" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:weightSum="1"
+        android:textAlignment="center">
 
         <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/buttonClosePoint"
-            android:layout_column="1"
-            android:layout_row="0"
-            android:adjustViewBounds="false"
-            android:layout_weight="1"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="false"
-            android:layout_alignWithParentIfMissing="false"
-            android:layout_alignParentBottom="false"
-            android:layout_centerVertical="true"
-            android:background="@drawable/ic_close_white_36dp"
-            android:padding="20dp"
-            android:onClick="onClick" />
-    </RelativeLayout>
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:id="@+id/medicButton"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/melo_design_button_normal"
+            android:contentDescription="NOpe"
+            android:onClick="onClick"
+            android:background="@color/button_material_dark"
+            android:clickable="true" />
+
+    </LinearLayout>
+
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center_vertical">
-
-        <ListView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/clientLocation"
-            android:layout_alignTop="@+id/buttonNav"
-            android:headerDividersEnabled="false"
-            android:clickable="true"
-            android:layout_toLeftOf="@+id/controlLayout"
-            android:layout_above="@+id/buttonNav"
-            android:visibility="gone" />
-
-        <ImageButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/clientsRouting"
-            android:layout_gravity="center_vertical"
-            android:src="@drawable/abc_ic_menu_moreoverflow_mtrl_alpha"
-            android:visibility="gone"
-            android:onClick="onClick" />
 
     </LinearLayout>
 

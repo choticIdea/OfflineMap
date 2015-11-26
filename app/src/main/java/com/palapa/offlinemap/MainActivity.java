@@ -22,7 +22,6 @@ import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +33,8 @@ import com.graphhopper.util.Constants;
 import com.graphhopper.util.PointList;
 import com.graphhopper.util.StopWatch;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.mapsforge.core.graphics.Bitmap;
 import org.mapsforge.core.graphics.Paint;
 import org.mapsforge.core.graphics.Style;
@@ -55,17 +56,24 @@ import org.mapsforge.map.rendertheme.ExternalRenderTheme;
 import org.mapsforge.map.rendertheme.InternalRenderTheme;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener,LocationListener,ListView.OnItemClickListener{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,LocationListener,ListView.OnItemClickListener {
 
     //public  static ArrayList<JSONObject> clientID;
-   // private ImageButton clientRouting;
+    // private ImageButton clientRouting;
     //private ListView clientListView;
-   // private ClientRoutingAdapter adapter;
+    // private ClientRoutingAdapter adapter;
+    private boolean routingMode = false;
+    private LatLong debugStartPoint;
     private ImageButton navButton;
+    private ImageButton medicButton;
     private LayerManager layManager;
     private LocationManager locManager;
     private File mapsFolder;
@@ -74,19 +82,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Marker navMarker;
     private LatLong end;
     private LinearLayout infoLayout;
+    private JSONArray hosps;
     private LinearLayout mapViewLayout;
     private GraphHopper hopper;
     private MapView mapView;
-    private RelativeLayout infoBar;
+    private LinearLayout infoBar;
     private String INDONESIA = "indonesia";
-    private TextView textFrom;
-    private TextView textTo;
+    private TextView hospitalNameView;
+    private String hospitalName = "Rumah Sakit ABC";
+    private double hospitalDistance =0f;
+    private TextView distanceView;
     private TileCache tileCache;
-    private Boolean routingMode = false;
-    private Boolean inited=false;
+    private Boolean debugMode = false;
+    private Boolean inited = false;
     private TileRendererLayer tileRendererLayer;
+    private LinearLayout controlLayout;
     private volatile boolean prepareInProgress = false;
-    private volatile boolean shortestPathRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,30 +105,48 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         Log.d("MainActivity", "First created");
+
         setContentView(R.layout.activity_main);
+        controlLayout = (LinearLayout) findViewById(R.id.controlLayout);
         navButton = (ImageButton) findViewById(R.id.buttonNav);
-        infoBar = (RelativeLayout) findViewById(R.id.infobar);
-        textFrom= (TextView) findViewById(R.id.from);
-        textTo  = (TextView) findViewById(R.id.to);
+        infoBar = (LinearLayout) findViewById(R.id.infobar);
+        hospitalNameView = (TextView) findViewById(R.id.hospitalName);
+        distanceView = (TextView) findViewById(R.id.distance);
+        debugStartPoint = new LatLong(-6.972713, 107.635101);
+        mapViewLayout = (LinearLayout) findViewById(R.id.mapViewLayout);
+        medicButton = (ImageButton) findViewById(R.id.medicButton);
+        locManager = (LocationManager) this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
 
-        mapViewLayout = (LinearLayout)findViewById(R.id.mapViewLayout);
-        locManager = (LocationManager)this.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
-        //clientRouting = (ImageButton) findViewById(R.id.clientsRouting);
-        //clientID = new ArrayList<>();
-       // clientListView = (ListView) findViewById(R.id.clientLocation);
-
-       // adapter = new ClientRoutingAdapter(this,getLayoutInflater(), clientID);
-
-       // clientListView.setAdapter(adapter);
-       // clientListView.setOnItemClickListener(this);
+        loadHospital();
 
         alertGPSoff();//TODO fixing this damn GPS
         initMap();//dont call this function when the GPS isn't okay
 
     }
-    void initMap()
+    void loadHospital()
     {
-        if(!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
+        try {
+            File data = new File(Environment.getExternalStorageDirectory(), "eletrouting/clients/ClientData.json");
+            FileInputStream dataStream = new FileInputStream(data);
+            String jsonString = null;
+            FileChannel fc = dataStream.getChannel();
+            MappedByteBuffer bb = fc.map(FileChannel.MapMode.READ_ONLY, 0, fc.size());
+            jsonString = Charset.defaultCharset().decode(bb).toString();
+            dataStream.close();
+            JSONObject mainNode= new JSONObject(jsonString);
+            hosps = mainNode.getJSONObject("data").getJSONArray("client");
+
+
+            Toast.makeText(this, "Client data loaded", Toast.LENGTH_SHORT).show();
+
+        }catch(Exception e){
+            Log.d("JSON error",e.toString());
+        }
+        Log.d("Load Hospital","Hospital loaded");
+    }
+
+    void initMap() {
+        if (!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
             return;
         AndroidGraphicFactory.createInstance(getApplication());
         mapView = new MapView(this);
@@ -130,10 +159,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         boolean greaterOrEqKitkat = Build.VERSION.SDK_INT >= 19;
         //maybe i should place another folder to setup
-        if (greaterOrEqKitkat)
-        {
-            if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED))
-            {
+        if (greaterOrEqKitkat) {
+            if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
                 // TODO ??? show error:"GraphHopper is not usable without an external storage!"
                 //some device spare the space in the internal storage for external usage
                 return;
@@ -145,23 +172,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (!mapsFolder.exists())
             mapsFolder.mkdirs();
+        //extract the file and give user some info about the installation
 
 
         final File mapFile = new File(mapsFolder, INDONESIA + "-gh");
-        if (mapFile.exists())
-        {
+        if (mapFile.exists()) {
             log("eksis");
             loadMap(mapFile);
-        }
-        else
-        {
+        } else {
             log("ga eksis");
             // TODO show error:"Folder not found: " mapFile
         }
         inited = true;
     }
 
-    void alertGPSoff(){
+    void alertGPSoff() {
         AlertDialog a = new AlertDialog.Builder(this)
                 .setTitle("GPS tidak menyala")
                 .setMessage("Aplikasi ini membutuhkan GPS untuk berjalan optimal")
@@ -175,15 +200,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 }).create();
 
-        if(!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
+        if (!locManager.isProviderEnabled(LocationManager.GPS_PROVIDER))
             a.show();
         a.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
-                Log.d("Dialog","Exited or..?");
+                Log.d("Dialog", "Exited or..?");
             }
         });
     }
+
+    void findNearestHospital() {
+        medicButton.setVisibility(View.GONE);
+        controlLayout.setVisibility(View.VISIBLE);
+        Toast.makeText(this, "Mencari Rumah Sakit.....", Toast.LENGTH_LONG).show();
+         calcPath(start.latitude, start.longitude);
+        locManager.removeUpdates(this);
+        routingMode  = true;
+        locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 100, this);
+
+    }
+    void finishCalc(double distance,JSONObject hospital)
+    {
+        Toast.makeText(this, "Perhitungan selesai", Toast.LENGTH_SHORT).show();
+        hospitalNameView.setText(hospitalName);
+
+        Marker p = createMarker(new LatLong(hospital.optDouble("latitude"),hospital.optDouble("longitude")),R.drawable.ic_place_red_36dp);
+        layManager.getLayers().add(p);
+        layManager.redrawLayers();
+        DecimalFormat df = new DecimalFormat("#.##");
+        distanceView.setText(df.format(distance / 1000f) + "  KM");
+        infoBar.setVisibility(View.VISIBLE);
+    }
+
     void loadMap( File areaFolder )
     {
         //TODO show message: "Loading map"
@@ -221,21 +270,49 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         mapView.getLayerManager().getLayers().add(tileRendererLayer);
-
-        mapViewLayout.addView(mapView);
+        mapViewLayout.addView(mapView);//pindahkan ke fungsi yang berbeda nanti
+       //mapViewLayout.setVisibility(View.INVISIBLE);
         pinpointUser();
         loadGraphStorage();
+
     }
 
     void pinpointUser() {
-         locManager.requestSingleUpdate(LocationManager.GPS_PROVIDER, this, null);
-         Location best = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-         if(best != null) {
-            mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(new LatLong(best.getLatitude(), best.getLongitude()), (byte) 15));
-             start = new LatLong(best.getLatitude(),best.getLongitude());
-             startMarker = createMarker(start,R.drawable.ic_place_blue_36dp);
-             layManager.getLayers().add(startMarker);
+         if(!debugMode) {
+             Location best = null;
+
+             for(String p:locManager.getAllProviders())
+             {
+                 Location test = locManager.getLastKnownLocation(p);
+                 if(test == null)
+                     continue;
+                 if(best == null ||(( test.getAccuracy() < best.getAccuracy()) &&( test.getAccuracy() != 0.0)))
+                     best = test;
+
+
+
+             }
+
+             if (best != null) {
+                 mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(new LatLong(best.getLatitude(), best.getLongitude()), (byte) 15));
+                 start = new LatLong(best.getLatitude(), best.getLongitude());
+             }else {
+                 mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(debugStartPoint, (byte) 15));
+                 start = debugStartPoint;
+             }
+             //case, what if there is no last known location?
+
+         }else {
+             start = debugStartPoint;
+         }
+
+
+        if(startMarker == null) {
+            startMarker = createMarker(start, R.drawable.ic_place_blue_36dp);
+            layManager.getLayers().add(startMarker);
         }
+        //locManager.requestSingleUpdate(LocationManager.GPS_PROVIDER,this,null);
+        locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 100, this);
 
     }
 
@@ -250,6 +327,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 tmpHopp.load(new File(mapsFolder, INDONESIA).getAbsolutePath());
                 //debug message: "found graph " + tmpHopp.getGraph().toString() + ", nodes:" + tmpHopp.getGraph().getNodes();
                 hopper = tmpHopp;
+
                 return null;
             }
 
@@ -317,7 +395,71 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Bitmap bitmap = AndroidGraphicFactory.convertToBitmap(drawable);
         return new Marker(p, bitmap, 0, -bitmap.getHeight() / 2);
     }
+    public void calcPath(final double fromLat,final double fromLon) {
+        new AsyncTask<Void, Void, GHResponse>()
+        {
+            JSONObject hospital;
+            int iterator;
+            protected GHResponse doInBackground( Void... v )
+            {
+                GHRequest req = null;
+                GHResponse resp = null;
+                GHResponse shortest =null;
+               // StopWatch sw = new StopWatch().start();
+                for(iterator = 0;iterator < hosps.length();iterator++) {
+                    if(hosps.optJSONObject(iterator) == null)
+                        continue;
+                    Log.d("Routing hospital",""+hosps.optJSONObject(iterator).optString("name")+" "+hosps.length());
+                    req = new GHRequest(fromLat, fromLon,  hosps.optJSONObject(iterator).optDouble("latitude")
+                                     ,hosps.optJSONObject(iterator).optDouble("longitude")).
+                            setAlgorithm(AlgorithmOptions.DIJKSTRA_BI);
+                    req.getHints().
+                            put("instructions", "false");
+                    resp = hopper.route(req);
+                    if(!resp.hasErrors()) {
+                       if(shortest == null) {
+                       shortest = resp;
+                           hospital = hosps.optJSONObject(iterator);
+                       }
+                        else {
+                               if(resp.getDistance() < shortest.getDistance())
+                                   shortest = resp;
+                       }
+                    }
+                }
 
+
+               // time = sw.stop().getSeconds();
+                hospitalName = hospital.optString("name");
+                Log.d("NUlll?",""+(hospital == null));
+                return shortest;
+            }
+
+            protected void onPostExecute( GHResponse resp )
+            {
+                if (!resp.hasErrors())
+                {
+                    //debug message "from:" + fromLat + "," + fromLon + " to:" + toLat + ","
+//                            + toLon + " found path with distance:" + resp.getDistance()
+//                            / 1000f + ", nodes:" + resp.getPoints().getSize() + ", time:"
+//                            + time + " " + resp.getDebugInfo())
+//                    debug message: "the route is " + (int) (resp.getDistance() / 100) / 10f
+//                            + "km long, time:" + resp.getMillis() / 60000f + "min, debug:" + time
+                    // resp.getDistance();
+                    mapView.getLayerManager().getLayers().add(createPolyline(resp));
+//                    setInfoBarVisible(true);
+                    //mapView.redraw();
+                    finishCalc(resp.getDistance(),hospital);
+                } else
+                {
+                    //debug message: "Error:" + resp.getErrors();
+                }
+
+
+
+            }
+        }.execute();
+    }
     public void calcPath( final double fromLat, final double fromLon,
                           final double toLat, final double toLon )
     {
@@ -335,6 +477,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 req.getHints().
                         put("instructions", "false");
                 GHResponse resp = hopper.route(req);
+
                 time = sw.stop().getSeconds();
                 return resp;
             }
@@ -349,7 +492,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                            + time + " " + resp.getDebugInfo())
 //                    debug message: "the route is " + (int) (resp.getDistance() / 100) / 10f
 //                            + "km long, time:" + resp.getMillis() / 60000f + "min, debug:" + time
-
+                   // resp.getDistance();
                     mapView.getLayerManager().getLayers().add(createPolyline(resp));
 //                    setInfoBarVisible(true);
                     //mapView.redraw();
@@ -357,7 +500,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 {
                     //debug message: "Error:" + resp.getErrors();
                 }
-                shortestPathRunning = false;
+
 
 
             }
@@ -385,34 +528,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     //interactions
 
-    public boolean onMapTap(LatLong tapLatLong, Point layerXY, Point tapXY)
-    {
-        if (!isReady())
-            return false;
 
-        if (shortestPathRunning)
-        {
-            logUser("Calculation still in progress");
-            return false;
-        }
-        if(start != null) {
-            Layers layers = layManager.getLayers();
-            end = tapLatLong;
-            shortestPathRunning = true;
-            Marker marker = createMarker(tapLatLong, R.drawable.place_red);
-            if (marker != null) {
-                layers.add(marker);
-            }
-
-            calcPath(start.latitude, start.longitude, end.latitude,
-                    end.longitude);
-            return true;
-        }
-        else
-            return false;
-
-
-    }
 
     public void removeLayersExceptMap(){
         Layers layers = layManager.getLayers();
@@ -424,9 +540,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void setInfoBarVisible(boolean visible){
         if(visible && start != null && end != null) {
-            DecimalFormat df = new DecimalFormat("#.######");
-            textFrom.setText(df.format(start.latitude) +", "+ df.format(start.longitude));
-            textFrom.setText(df.format(end.latitude) +", "+ df.format(end.longitude));
+
+            //textFrom.setText(df.format(start.latitude) +", "+ df.format(start.longitude));
+            //textFrom.setText(df.format(end.latitude) +", "+ df.format(end.longitude));
             infoBar.setVisibility(View.VISIBLE);
         } else {
             infoBar.setVisibility(View.GONE);
@@ -435,9 +551,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void onClick(View v){
         switch(v.getId()){
-           case R.id.buttonNav:
-               Intent i = new Intent(this,ClientPick.class);
-               startActivity(i);
+           case R.id.medicButton:
+               findNearestHospital();
                break;
             case R.id.buttonGps:
                 pinpointUser();
@@ -449,7 +564,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.controlZoomOut:
                 mapView.getModel().mapViewPosition.zoomOut();
                 break;
-            case R.id.buttonClosePoint:
+           /* case R.id.buttonClosePoint:
                 removeLayersExceptMap();
                 locManager.removeUpdates(this);
                 startMarker.setLatLong(start);
@@ -458,6 +573,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 infoBar.setVisibility(View.GONE);
                 routingMode = false;
                 break;
+                */
           /*  case R.id.clientsRouting:
                 clientListView.setVisibility(View.VISIBLE);
                 clientRouting.setVisibility(View.GONE);
@@ -473,8 +589,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(!inited)
             initMap();
         Log.d("MainActivity","resumed!");
-        Bundle extras = getIntent().getExtras();
-     /*   if(clientID.size() != 0)
+     /*    Bundle extras = getIntent().getExtras();
+       if(clientID.size() != 0)
             clientRouting.setVisibility(View.VISIBLE);
         else
             clientRouting.setVisibility(View.GONE);
@@ -490,10 +606,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             clientRouting.setVisibility(View.VISIBLE);
 
         */
-        if(extras != null ){
+    /*    if(extras != null ){
     LatLong pos = new LatLong(extras.getDouble("Latitude"),extras.getDouble("Longitude"));
+
     Marker p = createMarker(pos,R.drawable.place_red);
-   // mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(pos, (byte) 13));
+    mapView.getModel().mapViewPosition.setMapPosition(new MapPosition(pos, (byte) 13));
     layManager.getLayers().add(p);
             Toast.makeText(this, "Menghitung rute , " +
                     "tunggu hingga muncul jalur berwarna hijau", Toast.LENGTH_LONG).show();
@@ -503,14 +620,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             textFrom.setText(Double.toString(start.latitude)+" "+Double.toString(start.longitude));
             textTo.setText(Double.toString(extras.getDouble("Latitude"))+" "+Double.toString(extras.getDouble("Longitude")));
             routingMode = true;
-            locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,100,1,this );
+           // locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,100,1,this );
             navMarker = createMarker(start,R.drawable.ic_place_green_36dp);
             layManager.getLayers().add(navMarker);
             Toast.makeText(this,"Tanda hijau akan mulai bergerak jika GPS telah mengunci posisi",Toast.LENGTH_LONG).show();
+
+*/
+
         }
 
-
-    }
 
 
 
@@ -534,13 +652,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onLocationChanged(Location location) {
-
+        start = new LatLong(location.getLatitude(),location.getLongitude());
         if(routingMode)
      {
-        start = new LatLong(location.getLatitude(),location.getLongitude());
+
         navMarker.setLatLong(start);
          navMarker.requestRedraw();
      }
+        else {
+
+            startMarker.setLatLong(start);
+            startMarker.requestRedraw();
+        }
     }
 
     @Override
